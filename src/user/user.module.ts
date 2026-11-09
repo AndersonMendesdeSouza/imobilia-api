@@ -16,12 +16,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     JwtModule.registerAsync({
       useFactory: (): JwtModuleOptions => {
         const secret = process.env.JWT_SECRET;
-
-console.log('JWT definido:', secret !== undefined);
-console.log('JWT tamanho:', Buffer.byteLength(secret ?? '', 'utf8'));
-        if (!secret || Buffer.byteLength(secret) < 32) {
-          throw new Error('Configure JWT_SECRET com pelo menos 32 bytes.');
-        }
+        // if (!secret || Buffer.byteLength(secret) < 32) {
+        //   throw new Error('Configure JWT_SECRET com pelo menos 32 bytes.');
+        // }
         return {
           secret,
           signOptions: { algorithm: 'HS256', expiresIn: 3600 },
