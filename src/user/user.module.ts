@@ -16,6 +16,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     JwtModule.registerAsync({
       useFactory: (): JwtModuleOptions => {
         const secret = process.env.JWT_SECRET;
+        console.log('JWT existe?', !!secret);
+        console.log(
+          'JWT tamanho:',
+          secret ? Buffer.byteLength(secret, 'utf8') : 0,
+        );
         if (!secret || Buffer.byteLength(secret) < 32) {
           throw new Error('Configure JWT_SECRET com pelo menos 32 bytes.');
         }
@@ -30,4 +35,4 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
   providers: [UserService, JwtAuthGuard],
   exports: [UserService, JwtModule, JwtAuthGuard],
 })
-export class UserModule {}
+export class UserModule { }
