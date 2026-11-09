@@ -9,21 +9,20 @@ import {
   ValidationPipe,
   ParseUUIDPipe,
   Req,
-  UnauthorizedException,
   HttpCode,
   HttpStatus,
   SerializeOptions,
   UseInterceptors,
+  UseGuards,
   UploadedFiles,
   BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
 import { ImovelService } from './imovel.service';
 import { ImovelRequestDto } from '../dtos/request/imovel-request.dto';
 import { ImovelResponseDto } from '../dtos/response/imovel-response.dto';
-
-type RequestAutenticado = Request & { user?: { id: string } };
+import type { RequestAutenticado } from '../auth/request-autenticado';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('imovel')
 @SerializeOptions({ type: ImovelResponseDto })
@@ -31,6 +30,7 @@ export class ImovelController {
   constructor(private readonly imovelService: ImovelService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FilesInterceptor('files', 20, {
       limits: { fileSize: 1048576, fields: 80, fieldSize: 65536 },
@@ -38,7 +38,7 @@ export class ImovelController {
   )
   async create(
     @Body('dto') dto: string,
-    // @Req() request: RequestAutenticado,
+    @Req() request: RequestAutenticado,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     let dados: unknown;
@@ -48,13 +48,16 @@ export class ImovelController {
       throw new BadRequestException('O campo dto deve conter um JSON válido.');
     }
 
-    const imovelRequest: ImovelRequestDto = await new ValidationPipe({
+    const imovelRequest = (await new ValidationPipe({
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
-    }).transform(dados, { type: 'body', metatype: ImovelRequestDto });
+    }).transform(dados, {
+      type: 'body',
+      metatype: ImovelRequestDto,
+    })) as ImovelRequestDto;
 
-    return this.imovelService.create(imovelRequest, files);
+    return this.imovelService.create(imovelRequest, request.user.id, files);
   }
 
   @Get()
@@ -68,6 +71,7 @@ export class ImovelController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(
@@ -82,26 +86,16 @@ export class ImovelController {
     imovelRequest: Partial<ImovelRequestDto>,
     @Req() request: RequestAutenticado,
   ) {
-    return this.imovelService.update(
-      id,
-      imovelRequest,
-      this.getUsuarioId(request),
-    );
+    return this.imovelService.update(id, imovelRequest, request.user.id);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: RequestAutenticado,
   ) {
-    return this.imovelService.remove(id, this.getUsuarioId(request));
-  }
-
-  private getUsuarioId(request: RequestAutenticado): string {
-    if (!request.user?.id) {
-      throw new UnauthorizedException('Entre na sua conta para continuar.');
-    }
-    return request.user.id;
+    return this.imovelService.remove(id, request.user.id);
   }
 }

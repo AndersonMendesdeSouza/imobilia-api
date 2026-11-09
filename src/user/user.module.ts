@@ -7,6 +7,7 @@ import { UserEntity } from './entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ImageEntity } from '../image/entities/image.entity';
 import { ImageModule } from '../image/image.module';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { ImageModule } from '../image/image.module';
     }),
   ],
   controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+  providers: [UserService, JwtAuthGuard],
+  exports: [UserService, JwtModule, JwtAuthGuard],
 })
 export class UserModule {}

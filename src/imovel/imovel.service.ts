@@ -21,14 +21,13 @@ export class ImovelService {
     private readonly imovelRepository: Repository<ImovelEntity>,
     private readonly userService: UserService,
     private readonly imgService: ImageService,
-  ) { }
+  ) {}
 
   async create(
     imovelRequest: ImovelRequestDto,
-    /*     usuarioId: string, */
+    usuarioId: string,
     files: Express.Multer.File[] = [],
   ): Promise<ImovelEntity> {
-    const usuarioId = '83b34910-a046-46c6-bf3b-c8743b7b6fd7';
     const usuario = await this.buscarUsuarioAtivo(usuarioId);
     if (!files.length)
       throw new BadRequestException('Envie ao menos uma imagem do imóvel.');

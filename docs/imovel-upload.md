@@ -1,6 +1,6 @@
 # Criar imóvel com imagens pelo Postman
 
-Use `POST /imovel` com **Body → form-data**. Envie o DTO inteiro como JSON no campo `dto` e as imagens em `files`.
+Use `POST /imovel` com **Authorization → Bearer Token**, preenchendo o token retornado por `POST /user/login`. Em **Body → form-data**, envie o DTO inteiro como JSON no campo `dto` e as imagens em `files`.
 
 | Campo | Tipo | Conteúdo |
 | --- | --- | --- |
@@ -36,8 +36,8 @@ No front, `api.postForm('/imovel', { dto: JSON.stringify(dto), files }, { formSe
 
 São aceitas de 1 a 20 imagens JPG, PNG ou WebP, de até 1 MB cada. A primeira é a principal. Não defina o `Content-Type` manualmente no Postman.
 
-A criação está temporariamente usando o usuário fixado no `ImovelService` para testes locais. Login e autenticação dessa criação ainda estão pendentes.
+O `JwtAuthGuard` valida assinatura HS256 e expiração e preenche `request.user.id` a partir de `sub`. O controller passa esse ID ao service; o proprietário não vem do formulário. O ID fixo foi removido. Token ausente, vencido ou adulterado retorna 401 antes do processamento dos arquivos. A conta precisa continuar ativa para publicar.
 
-O `PATCH /imovel/:id` continua recebendo os campos diretamente em JSON; não usa o envelope `dto` nem altera imagens.
+O `PATCH /imovel/:id` continua recebendo os campos diretamente em JSON; não usa o envelope `dto` nem altera imagens. Edição e exclusão também exigem Bearer Token e mantêm a verificação de proprietário ou administrador. `GET /imovel` e `GET /imovel/:id` continuam públicos.
 
 `npm run test:multipart` verifica esse contrato HTTP com banco e Cloudinary simulados.
