@@ -18,6 +18,9 @@ import { ImageModule } from './image/image.module';
     password: process.env.DB_PASSWORD,
     autoLoadEntities: true,
     synchronize: true,
+    ssl: process.env.DB_SSL === 'true'
+      ? { rejectUnauthorized: false }
+      : false,
   }), UserModule, ImovelModule, ImageModule],
   controllers: [AppController],
   providers: [AppService],

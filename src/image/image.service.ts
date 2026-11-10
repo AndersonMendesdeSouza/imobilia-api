@@ -155,46 +155,44 @@ export class ImageService {
     return new Error(error.message || 'Erro ao enviar imagem para Cloudinary');
   }
 
-  // async deleteImages(imageIds: string[], companyId: string): Promise<void> {
-  //   const images = await this.repo.find({
-  //     where: { id: In(imageIds), companyId },
-  //   });
+  async deleteImages(imageIds: string[]): Promise<void> {
+    if (!imageIds.length) return;
 
-  //   for (const image of images) {
-  //     await this.deleteImageByPublicId(image.publicId);
-  //     await this.repo.remove(image);
-  //   }
-  // }
+    const images = await this.repo.find({
+      where: { id: In(imageIds) },
+    });
 
-  // async deleteImageByPublicId(publicId: string): Promise<void> {
-  //   try {
-  //     const response: unknown = await this.cloudinary.uploader.destroy(
-  //       publicId,
-  //       {
-  //         invalidate: true,
-  //       },
-  //     );
+    for (const image of images) {
+      await this.deleteImageByPublicId(image.publicUrlId);
+      await this.repo.remove(image);
+    }
+  }
 
-  //     if (
-  //       typeof response !== 'object' ||
-  //       response === null ||
-  //       !('result' in response) ||
-  //       (response.result !== 'ok' && response.result !== 'not found')
-  //     ) {
-  //       throw new InternalServerErrorException(
-  //         'Não foi possível excluir a imagem no Cloudinary.',
-  //       );
-  //     }
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Erro ao excluir imagem do Cloudinary: ${publicId}`,
-  //       error instanceof Error ? error.stack : undefined,
-  //     );
-  //     throw error;
-  //   }
-  // }
+  async deleteImageByPublicId(publicId: string): Promise<void> {
+    try {
+      const response: unknown = await this.cloudinary.uploader.destroy(
+        publicId,
+        {
+          invalidate: true,
+        },
+      );
 
-  // private toUploadError(error: UploadApiErrorResponse): Error {
-  //   return new Error(error.message || 'Erro ao enviar imagem para Cloudinary');
-  // }
+      if (
+        typeof response !== 'object' ||
+        response === null ||
+        !('result' in response) ||
+        (response.result !== 'ok' && response.result !== 'not found')
+      ) {
+        throw new InternalServerErrorException(
+          'Não foi possível excluir a imagem no Cloudinary.',
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Erro ao excluir imagem do Cloudinary: ${publicId}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
+  }
 }

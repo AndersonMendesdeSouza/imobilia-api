@@ -131,8 +131,10 @@ export class ImovelService {
     const imovel = await this.findOne(id);
     this.validarResponsavel(imovel, usuario);
 
+    await this.imgService.deleteImages(
+      imovel.imagens.map((imagem) => imagem.id),
+    );
     await this.imovelRepository.remove(imovel);
-    // Integre a remoção dos arquivos no Cloudinary usando imovel.imagens.
   }
 
   private async buscarUsuarioAtivo(usuarioId: string): Promise<UserEntity> {
