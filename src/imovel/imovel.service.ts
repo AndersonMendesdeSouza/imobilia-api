@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,6 +17,8 @@ import { ImageService } from 'src/image/image.service';
 
 @Injectable()
 export class ImovelService {
+  private readonly logger = new Logger(ImovelService.name);
+
   constructor(
     @InjectRepository(ImovelEntity)
     private readonly imovelRepository: Repository<ImovelEntity>,
@@ -92,10 +95,43 @@ export class ImovelService {
     id: string,
     imovelRequest: Partial<ImovelRequestDto>,
     usuarioId: string,
+    files: Express.Multer.File[] = [],
   ): Promise<ImovelEntity> {
     const usuario = await this.buscarUsuarioAtivo(usuarioId);
     const imovel = await this.findOne(id);
     this.validarResponsavel(imovel, usuario);
+
+    const imagensRemovidas = imovelRequest.imagensRemovidas ?? [];
+    for (const imagemId of imagensRemovidas) {
+      if (!imovel.imagens.some((imagem) => imagem.id === imagemId)) {
+        throw new BadRequestException(
+          'Uma das imagens informadas não pertence a este imóvel.',
+        );
+      }
+    }
+
+    const imagensMantidas = imovel.imagens.filter(
+      (imagem) => !imagensRemovidas.includes(imagem.id),
+    );
+    const alterandoImagens = files.length > 0 || imagensRemovidas.length > 0;
+    const totalImagens = imagensMantidas.length + files.length;
+    if (alterandoImagens && totalImagens === 0) {
+      throw new BadRequestException('O imóvel deve ter ao menos uma imagem.');
+    }
+    if (alterandoImagens && totalImagens > 20) {
+      throw new BadRequestException('O imóvel pode ter no máximo 20 imagens.');
+    }
+
+    // Envia as novas fotos antes de remover as antigas para preservar as atuais se o upload falhar.
+    const novasImagens = await this.imgService.createImages(
+      files.map((file) => ({
+        file,
+        isPrimary: false,
+        imovelId: imovel.id,
+        usuarioId: null,
+      })),
+    );
+    imovel.imagens = [...imovel.imagens, ...novasImagens];
 
     this.imovelRepository.merge(imovel, {
       titulo: imovelRequest.titulo?.trim(),
@@ -121,8 +157,29 @@ export class ImovelService {
       imovel.vagasGaragem = 0;
     }
 
-    // A alteração das imagens será tratada separadamente do PATCH dos dados.
-    await this.imovelRepository.save(imovel);
+    try {
+      await this.imovelRepository.save(imovel);
+    } catch (error) {
+      try {
+        await this.imgService.deleteImages(
+          novasImagens.map((imagem) => imagem.id),
+        );
+      } catch (cleanupError) {
+        this.logger.error(
+          'Não foi possível remover as novas imagens após falha ao atualizar o imóvel.',
+          cleanupError instanceof Error ? cleanupError.stack : undefined,
+        );
+      }
+      throw error;
+    }
+
+    if (alterandoImagens) {
+      await this.imgService.deleteImages(imagensRemovidas);
+      await this.imgService.definirImagemPrincipal([
+        ...imagensMantidas,
+        ...novasImagens,
+      ]);
+    }
     return this.findOne(id);
   }
 

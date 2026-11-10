@@ -1,16 +1,19 @@
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayUnique,
   IsArray,
   IsEnum,
   IsIn,
   IsInt,
   IsNumber,
   IsString,
+  IsUUID,
   Length,
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { FinalidadeImovel, TipoImovel } from '../enums/enums';
 import { ESTADOS_BRASILEIROS } from '../estados';
@@ -92,4 +95,11 @@ export class ImovelRequestDto {
   @IsString({ each: true })
   @MaxLength(100, { each: true })
   comodidades: string[];
+
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  imagensRemovidas?: string[];
 }

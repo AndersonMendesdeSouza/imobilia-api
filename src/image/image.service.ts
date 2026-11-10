@@ -168,6 +168,16 @@ export class ImageService {
     }
   }
 
+  async definirImagemPrincipal(imagens: ImageEntity[]): Promise<void> {
+    if (!imagens.length) return;
+
+    const principal = imagens.find((imagem) => imagem.isPrimary) ?? imagens[0];
+    for (const imagem of imagens) {
+      imagem.isPrimary = imagem.id === principal.id;
+    }
+    await this.repo.save(imagens);
+  }
+
   async deleteImageByPublicId(publicId: string): Promise<void> {
     try {
       const response: unknown = await this.cloudinary.uploader.destroy(
