@@ -38,6 +38,27 @@ São aceitas de 1 a 20 imagens JPG, PNG ou WebP, de até 1 MB cada. A primeira �
 
 O `JwtAuthGuard` valida assinatura HS256 e expiração e preenche `request.user.id` a partir de `sub`. O controller passa esse ID ao service; o proprietário não vem do formulário. O ID fixo foi removido. Token ausente, vencido ou adulterado retorna 401 antes do processamento dos arquivos. A conta precisa continuar ativa para publicar.
 
-O `PATCH /imovel/:id` continua recebendo os campos diretamente em JSON; não usa o envelope `dto` nem altera imagens. Edição e exclusão também exigem Bearer Token e mantêm a verificação de proprietário ou administrador. `GET /imovel` e `GET /imovel/:id` continuam públicos.
+## Editar dados e fotos
+
+O `PATCH /imovel/:id` aceita os campos diretamente em JSON ou `form-data` com o JSON em `dto` e os novos arquivos em `files`, no mesmo formato da criação. O DTO da edição pode conter apenas os campos alterados.
+
+Para remover fotos existentes, inclua seus IDs em `imagensRemovidas` dentro do JSON `dto`:
+
+```json
+{
+  "titulo": "Casa com jardim atualizada",
+  "imagensRemovidas": ["00000000-0000-4000-8000-000000000001"]
+}
+```
+
+Use IDs retornados em `imagens` pelo GET do imóvel. As fotos que não estiverem nessa lista são mantidas. Não reenvie suas URLs ou arquivos. Para adicionar fotos, envie os arquivos novos em campos `files` repetidos. No front, `api.patchForm` monta esse formulário.
+
+O total de fotos mantidas e novas deve ficar entre 1 e 20. A principal atual é preservada; se for removida, a próxima foto mantida assume o lugar, ou a primeira nova quando todas as anteriores forem removidas. A API verifica se os IDs pertencem ao imóvel e remove as fotos selecionadas do banco e do Cloudinary.
+
+No formulário, selecionar arquivos e usar o X só altera as prévias. O envio e as exclusões acontecem ao salvar. Se o upload falhar, as fotos antigas são preservadas. A exclusão no Cloudinary não é transacional: se falhar após apagar parte das fotos, as que já foram apagadas não são restauradas; recarregue o anúncio antes de tentar novamente.
+
+Edição e exclusão exigem Bearer Token e mantêm a verificação de proprietário ou administrador. `GET /imovel` e `GET /imovel/:id` continuam públicos.
 
 `npm run test:multipart` verifica esse contrato HTTP com banco e Cloudinary simulados.
+
+Após compilar a API, `node --test test/imovel-update.test.cjs` verifica adição, remoção e troca da principal, limites, permissões, compatibilidade com JSON e falhas de upload e gravação, com banco e Cloudinary simulados.

@@ -75,7 +75,6 @@ export class UserService {
       select: { id: true, senhaHash: true, perfil: true, ativo: true },
     });
 
-    // Mantém o cálculo de senha mesmo quando o e-mail não está cadastrado.
     const hash =
       usuario?.senhaHash ??
       `scrypt$32768$8$3$${'0'.repeat(32)}$${'0'.repeat(128)}`;
